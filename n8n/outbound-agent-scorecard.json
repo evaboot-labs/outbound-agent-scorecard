@@ -1,0 +1,452 @@
+{
+  "name": "Outbound agent scorecard (Evaboot + Claude)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "348451e6-583e-46f3-8640-829102072b06",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6086d475-90ff-4492-835f-edb239376be3",
+              "name": "search_url",
+              "type": "string",
+              "value": "PASTE_A_SALES_NAVIGATOR_SEARCH_URL"
+            },
+            {
+              "id": "33b24430-ce62-483a-a379-c37ab7285fcb",
+              "name": "export_name",
+              "type": "string",
+              "value": "Outbound agent scorecard"
+            },
+            {
+              "id": "a974c2bb-3121-4f85-9010-8a11240bd951",
+              "name": "extraction_id",
+              "type": "string",
+              "value": ""
+            },
+            {
+              "id": "23c4efb8-3760-4e4a-b26c-31ea508fdfa0",
+              "name": "icp",
+              "type": "string",
+              "value": "PASTE YOUR ICP (see ICP.md): who, the fit rules, the offer, the proof you may use, the ask."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e585149a-e5c1-4e92-bd66-15755abe5e9d",
+      "name": "Your settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "22d43681-ac57-4c3c-8ea8-fc03b3b4ea8c",
+              "leftValue": "={{ $json.extraction_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8c5de7f6-a007-4264-9ac4-43219623df7d",
+      "name": "New export?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://mcp.evaboot.com/mcp",
+        "authentication": "bearerAuth",
+        "tool": {
+          "__rl": true,
+          "mode": "list",
+          "value": "export_sn_search_or_list",
+          "cachedResultName": "export_sn_search_or_list"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ search_url: $json.search_url, name: $json.export_name, max_results: 10 }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "3f835e4a-f425-4b29-be81-5a64f08b8fa0",
+      "name": "Export 10 leads",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        -120
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "",
+          "name": "Evaboot MCP (Bearer)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://mcp.evaboot.com/mcp",
+        "authentication": "bearerAuth",
+        "tool": {
+          "__rl": true,
+          "mode": "list",
+          "value": "get_export",
+          "cachedResultName": "get_export"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ extraction_id: $('Your settings').first().json.extraction_id || $('Export 10 leads').first().json.structuredContent.result.extraction_id }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a60b2f79-3db9-4332-9cf5-9a258036d49d",
+      "name": "Get the leads",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "",
+          "name": "Evaboot MCP (Bearer)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b1d7bba9-422a-4796-8d1d-6dece69ddb87",
+              "leftValue": "={{ $json.structuredContent?.result?.status }}",
+              "rightValue": "EXECUTED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4a957c7e-61c5-4e76-b02a-ce71d7b03380",
+      "name": "Export done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Stops on a failed export, or after 20 minutes, instead of waiting forever.\nconst st = String($json.structuredContent?.result?.status || '');\nif (['FAILED', 'ERROR', 'CANCELLED', 'CANCELED'].includes(st.toUpperCase())) throw new Error(`The export ended as ${st}.`);\nif ($runIndex >= 40) throw new Error('The export is still running after 20 minutes. Put its extraction_id in Your settings and run again later.');\nreturn $input.all();\n"
+      },
+      "id": "633cfe2f-58bc-4b4e-951a-2ea10f716969",
+      "name": "Still running?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "6c16c217-e2a2-41e1-92ed-f4e9b1aa9661",
+      "name": "Wait 30 seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        200
+      ],
+      "webhookId": "26fde5a9-3fde-438a-bfb4-ec1e2977b304"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// The real fields of each lead: the only facts the agent may use. Same as scorecard.py facts.\nconst r = $json.structuredContent?.result || {};\nconst num = v => { const n = parseFloat(String(v ?? '').replace(/[,%]/g, '')); return isNaN(n) ? null : n; };\nconst clean = (s, n) => { s = String(s ?? '').split(/\\s+/).join(' ').trim(); if (['NA', 'None', 'N/A'].includes(s)) s = ''; return n ? s.slice(0, n) : s; };\nconst LINK_DOMAINS = ['ow.ly', 'bit.ly', 'linktr.ee', 'lnkd.in', 'beacons.ai', 'carrd.co', 'about.me', 't.co'];\nconst domainNote = (email, company) => {\n  if (!email) return '';\n  const d = email.split('@').pop().toLowerCase(); company = String(company || '').toLowerCase();\n  if (LINK_DOMAINS.includes(company)) return `the company's domain is ${company}, a link site: check the email by hand`;\n  if (company && !(d === company || d.endsWith('.' + company) || company.endsWith('.' + d))) return `email domain ${d} differs from the company's ${company}`;\n  return '';\n};\nconst leads = (r.prospects || []).slice(0, 10).map(p => {\n  const y = num(p['Years in Position']), m = num(p['Months in Position']);\n  const months = y === null && m === null ? null : Math.trunc((y || 0) * 12 + (m || 0));\n  const g6 = num(p['Company Employee Growth 6 Months (%)']), g1 = num(p['Company Employee Growth 1 Year (%)']);\n  return {\n    id: p['Linkedin URL Unique ID'] || p['Linkedin URL Public'] || p['Full Name'],\n    first_name: p['First Name'] || '', name: [p['First Name'], p['Last Name']].filter(Boolean).join(' '),\n    matches_filters: p['Matches Filters'] || '', no_match_reasons: clean(p['No Match Reasons']),\n    title: clean(p['Current Job']), company: p['Company Name'] || '', company_domain: p['Company Domain'] || '',\n    industry: p['Company Industry'] || '', employees: num(p['Company Employee Exact Count']),\n    employee_range: p['Company Employee Range'] || '',\n    company_growth_6m_pct: g6 === null ? null : Math.round(g6), company_growth_1y_pct: g1 === null ? null : Math.round(g1),\n    sales_team: num(p['Sales Team Size']), months_in_role: months, years_in_role: months === null ? null : Math.floor(months / 12),\n    new_in_role: ['true', 'yes', '1'].includes(String(p['Has New Position']).toLowerCase()) || (months !== null && months < 6),\n    location: p['Location'] || p['Lead Location'] || '', headline: clean(p['Profile Headline']),\n    summary: clean(p['Profile Summary'], 600), company_description: clean(p['Company Description'], 400),\n    email: p['Email'] || '', email_status: p['Email Status'] || 'not found',\n    email_check: domainNote(p['Email'] || '', p['Company Domain']),\n  };\n});\nif (!leads.length) throw new Error('The export has no leads.');\nreturn [{ json: { leads } }];\n"
+      },
+      "id": "d98213db-9c4c-4336-b639-677418bc5eb3",
+      "name": "Facts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json.leads) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are an outbound sales agent. You get an ICP and up to ten leads as JSON. For each lead, run three steps from that lead's fields and the ICP only. Never invent a customer, a number, a signal or a result.\n1. Qualify: fit 1 to 5 by the ICP's fit rules, a one-line reason, and evidence: the names of the lead fields the reason rests on.\n2. Why now (fit 3 or more): one line from one real signal, and why_now_field: one of new_in_role, months_in_role, years_in_role, company_growth_6m_pct, company_growth_1y_pct, sales_team, employees, which must be filled for this lead.\n3. First message (fit 3 or more): channel \"email\" only when email_status is \"safe\" and email_check is empty, with a subject under 60 characters and a 40 to 110 word body; otherwise channel \"linkedin\", a connection note under 300 characters. Greet the lead by first name. One real fact, the offer in one line, the ask. No link, no template phrase. Or skip: true with a skip_reason.\nReturn {leads: [{id, fit, reason, evidence, why_now, why_now_field, channel, subject, message, skip, skip_reason}]}. Nothing is sent.\n\nICP:\n{{ $('Your settings').first().json.icp }}",
+          "maxIterations": 3
+        }
+      },
+      "id": "0f4496ec-9314-4938-a5dd-52e67c0ad4d1",
+      "name": "Run the agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5-5",
+          "cachedResultName": "claude-sonnet-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 12000
+        }
+      },
+      "id": "49585abc-c141-4476-8697-74d44c85f354",
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1500,
+        220
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "",
+          "name": "Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\n    \"leads\"\n  ],\n  \"properties\": {\n    \"leads\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"required\": [\n          \"id\",\n          \"fit\",\n          \"reason\",\n          \"evidence\"\n        ],\n        \"properties\": {\n          \"id\": {\n            \"type\": \"string\"\n          },\n          \"fit\": {\n            \"type\": \"integer\"\n          },\n          \"reason\": {\n            \"type\": \"string\"\n          },\n          \"evidence\": {\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"string\"\n            }\n          },\n          \"why_now\": {\n            \"type\": \"string\"\n          },\n          \"why_now_field\": {\n            \"type\": \"string\"\n          },\n          \"channel\": {\n            \"type\": \"string\"\n          },\n          \"subject\": {\n            \"type\": \"string\"\n          },\n          \"message\": {\n            \"type\": \"string\"\n          },\n          \"skip\": {\n            \"type\": \"boolean\"\n          },\n          \"skip_reason\": {\n            \"type\": \"string\"\n          }\n        }\n      }\n    }\n  }\n}"
+      },
+      "id": "6383d67b-f34c-4839-ac1d-8d35b2a71fb2",
+      "name": "Agent output",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1660,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Checks every output against the lead's real fields and scores each step. Same rules as scorecard.py.\nconst s = $('Your settings').first().json;\nconst leads = $('Facts').first().json.leads;\nconst out = Object.fromEntries(($json.output?.leads || []).map(a => [a.id, a]));\nconst FIT_MIN = 3, WORDS = [40, 110], SUBJECT_MAX = 60, NOTE_MAX = 300;\nconst CLICHES = ['hope this finds you', \"i hope you're well\", 'just checking in', 'quick question', 'touch base',\n  'circle back', 'synergy', 'game-changer', 'game changer', 'revolutionize', 'i came across your profile',\n  'happy to connect', 'would love to connect', 'pick your brain', 'reaching out because'];\nconst SIGNALS = ['new_in_role', 'months_in_role', 'years_in_role', 'company_growth_6m_pct', 'company_growth_1y_pct', 'sales_team', 'employees'];\nconst LINK = /https?:\\/\\/|www\\.|\\b[a-z0-9-]+\\.(com|io|ai|co|net|org|app|dev|de)\\b/i;\nconst NUM = /\\d+(?:[.,]\\d+)?/g;\nconst clean = x => String(x ?? '').split(/\\s+/).join(' ').trim();\nconst present = v => !(v === null || v === undefined || v === '' || v === false || (Array.isArray(v) && !v.length));\nconst unknownNumbers = (text, lead) => {\n  const known = new Set((JSON.stringify(lead) + ' ' + s.icp).match(NUM) || []);\n  return (clean(text).match(NUM) || []).filter(n => !known.has(n) && !known.has(n.replace(/,/g, '')));\n};\nconst results = leads.map(lead => {\n  const a = out[lead.id], r = { find: [] };\n  if (lead.matches_filters && lead.matches_filters !== 'YES') r.find.push(`does not match the search filters (${lead.no_match_reasons || 'no reason given'})`);\n  if (!a) { r.qualify = ['the agent returned nothing for this lead']; return { lead, a: {}, r }; }\n  const q = r.qualify = [];\n  if (![1, 2, 3, 4, 5].includes(a.fit)) q.push('fit must be 1 to 5');\n  if (!clean(a.reason)) q.push('no reason');\n  if (!(a.evidence || []).length) q.push('no evidence fields');\n  for (const f of a.evidence || []) {\n    if (!(f in lead)) q.push(`evidence field '${f}' does not exist`);\n    else if (!present(lead[f])) q.push(`evidence field '${f}' is empty for this lead`);\n  }\n  unknownNumbers(a.reason, lead).forEach(n => q.push(`number ${n} in the reason is not in the data`));\n  if (lead.matches_filters && lead.matches_filters !== 'YES' && a.fit >= FIT_MIN) q.push('scored a fit although it does not match the search filters');\n  if (!(a.fit >= FIT_MIN)) { if (a.message) q.push('a lead under the fit bar must not get a message'); return { lead, a, r }; }\n  const w = r.why_now = [];\n  if (!clean(a.why_now)) w.push('no why-now line');\n  if (!SIGNALS.includes(a.why_now_field)) w.push(`why_now_field must be one of ${SIGNALS.join(', ')}`);\n  else if (!present(lead[a.why_now_field])) w.push(`'${a.why_now_field}' is empty for this lead: the signal is invented`);\n  unknownNumbers(a.why_now, lead).forEach(n => w.push(`number ${n} in the why-now is not in the data`));\n  const m = r.write = [], msg = clean(a.message), subj = clean(a.subject);\n  if (a.skip) { if (!clean(a.skip_reason)) m.push('skipped without a reason'); return { lead, a, r }; }\n  if (!['email', 'linkedin'].includes(a.channel)) m.push('channel must be email or linkedin');\n  if (!msg) m.push('no message');\n  if (a.channel === 'email') {\n    if (lead.email_status !== 'safe') m.push(`email channel but the email is ${lead.email_status}: use linkedin`);\n    if (lead.email_check) m.push(lead.email_check);\n    const n = msg.split(' ').filter(Boolean).length;\n    if (n < WORDS[0] || n > WORDS[1]) m.push(`${n} words, keep ${WORDS[0]} to ${WORDS[1]}`);\n    if (!subj || subj.length > SUBJECT_MAX) m.push(`subject missing or over ${SUBJECT_MAX} characters`);\n  }\n  if (a.channel === 'linkedin' && msg.length > NOTE_MAX) m.push(`${msg.length} characters, a connection note takes ${NOTE_MAX}`);\n  const low = (msg + ' ' + subj).toLowerCase();\n  CLICHES.filter(c => low.includes(c)).forEach(c => m.push(`template phrase: '${c}'`));\n  if (LINK.test(msg)) m.push('a link or a domain in a first message');\n  if (lead.first_name && !msg.toLowerCase().includes(lead.first_name.toLowerCase())) m.push(`does not greet ${lead.first_name} by name`);\n  unknownNumbers(msg + ' ' + subj, lead).forEach(n => m.push(`number ${n} is not in the data`));\n  return { lead, a, r };\n});\nconst STEPS = [['find', 'Find', 'the export matches your filters'], ['qualify', 'Qualify', 'a fit score whose reason rests on real fields'],\n  ['why_now', 'Why now', 'one real signal per fit lead'], ['write', 'First message', 'a draft that passes every message rule']];\nconst verdict = (ok, t) => !t ? 'not reached' : ok / t >= 0.9 ? 'ready for an agent' : ok / t >= 0.6 ? 'fix one rule, run again' : 'keep a person on it';\nconst steps = STEPS.map(([k, label, what]) => {\n  const done = results.filter(x => k in x.r);\n  const ok = done.filter(x => !x.r[k].length).length;\n  return { step: label, checked: what, passed: ok, total: done.length, verdict: verdict(ok, done.length) };\n});\nconst first = steps.find(x => x.total && x.passed / x.total >= 0.9);\nconst cell = x => clean(x).replace(/\\|/g, '/');\nconst md = ['# Outbound agent scorecard', '', `${leads.length} leads, the same leads through every step. Nothing was sent.`, '',\n  '| Step | What is checked | Passed | Verdict |', '|---|---|---|---|',\n  ...steps.map(x => `| ${x.step} | ${x.checked} | ${x.passed}/${x.total} | ${x.verdict} |`), '',\n  `**Hand to an agent first:** ${first ? first.step : 'no step yet: fix the failing rule and run the ten leads again'}.`, '',\n  '| Lead | Title | Company | Fit | Reason | Why now | Channel | Message | Problems |', '|---|---|---|---|---|---|---|---|---|',\n  ...results.map(({ lead, a, r }) => `| ${cell(lead.first_name)} | ${cell(lead.title)} | ${cell(lead.company)} | ${a.fit ?? ''} | ${cell(a.reason)} | ${cell(a.why_now)} | ${a.channel || ''} | ${cell(a.skip ? 'skipped: ' + a.skip_reason : a.message)} | ${cell(Object.entries(r).flatMap(([k, ps]) => ps.map(p => k + ': ' + p)).join('; ') || 'none')} |`)];\nreturn [{ json: { steps, hand_first: first ? first.step : null,\n  problems: results.flatMap(({ lead, r }) => Object.entries(r).flatMap(([k, ps]) => ps.map(p => `${k}: ${lead.first_name} (${lead.company}): ${p}`))),\n  scorecard_md: md.join('\\n') } }];\n"
+      },
+      "id": "910532af-9438-4bf2-967d-ad6fea7b8706",
+      "name": "Check and score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Your settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Your settings": {
+      "main": [
+        [
+          {
+            "node": "New export?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export 10 leads": {
+      "main": [
+        [
+          {
+            "node": "Get the leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the leads": {
+      "main": [
+        [
+          {
+            "node": "Export done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30 seconds": {
+      "main": [
+        [
+          {
+            "node": "Get the leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facts": {
+      "main": [
+        [
+          {
+            "node": "Run the agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run the agent": {
+      "main": [
+        [
+          {
+            "node": "Check and score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New export?": {
+      "main": [
+        [
+          {
+            "node": "Export 10 leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get the leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export done?": {
+      "main": [
+        [
+          {
+            "node": "Facts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Still running?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still running?": {
+      "main": [
+        [
+          {
+            "node": "Wait 30 seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Run the agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent output": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Run the agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

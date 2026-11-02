@@ -1,0 +1,13 @@
+{
+  "name": "outbound-agent-scorecard",
+  "version": "1.0.0",
+  "description": "Run ten Sales Navigator leads from Evaboot through four outbound steps, check every output against the real data, and get a scorecard of which step to hand to an AI agent first. Sends nothing.",
+  "author": { "name": "Evaboot", "url": "https://evaboot.com" },
+  "homepage": "https://evaboot.com/blog/ai-agents-for-outbound-sales",
+  "repository": "https://github.com/evaboot-labs/outbound-agent-scorecard",
+  "license": "MIT",
+  "privacyPolicyUrl": "https://evaboot.com/privacy-policy",
+  "keywords": ["outbound", "ai-agent", "sales-navigator", "lead-qualification", "cold-email", "evaboot", "mcp", "n8n"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}
