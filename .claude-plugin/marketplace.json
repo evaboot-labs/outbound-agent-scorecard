@@ -1,0 +1,14 @@
+{
+  "name": "evaboot-labs-outbound-agent-scorecard",
+  "owner": { "name": "Evaboot", "url": "https://evaboot.com" },
+  "metadata": {
+    "description": "Test an AI outbound agent on ten real leads: find, qualify, why now and first message, each step checked and scored."
+  },
+  "plugins": [
+    {
+      "name": "outbound-agent-scorecard",
+      "source": "./",
+      "description": "Run ten Sales Navigator leads from Evaboot through four outbound steps, check every output against the real data, and get a scorecard of which step to hand to an AI agent first. Sends nothing."
+    }
+  ]
+}

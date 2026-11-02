@@ -1,0 +1,7 @@
+{"layout": "flow", "eyebrow": "evaboot-labs · outbound-agent-scorecard", "headline": "Test your agent on ten leads.",
+ "subline": "Four outbound steps, every output checked against real data.",
+ "nodes": [{"label": "01 · Find", "title": "Sales Navigator", "caption": "Ten leads, exported by Evaboot"},
+           {"label": "02 · Qualify", "title": "Your AI Agent", "caption": "Fit, why now, first message"},
+           {"label": "03 · Check", "title": "scorecard.py", "caption": "Every claim against the data"},
+           {"label": "04 · Result", "title": "A scorecard", "caption": "The step to hand off first"}],
+ "spec": "server <em>mcp.evaboot.com/mcp</em> · nothing is sent"}
