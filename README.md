@@ -43,7 +43,7 @@ npx skills add evaboot-labs/outbound-agent-scorecard
 
 <img src=".github/assets/screenshots/1-export.png" alt="Evaboot Sales Navigator exports page with the two 10-lead scorecard test exports" width="800">
 
-**2. Every output checked.** The agent qualifies, finds a why-now and drafts a message for each lead. `scorecard.py` checks each claim against the real fields and scores the four steps.
+**2. Every output checked.** The agent qualifies, finds a why-now and drafts a message for each lead. `scorecard.py` checks each claim against the real fields and scores the four steps. `claimcheck.py` then checks what each draft says about the lead: a number used as the wrong field, a new role that isn't new, growth that went the other way.
 
 <img src=".github/assets/screenshots/2-scorecard.png" alt="Terminal: the scorecard for ten leads, find 7 of 10, qualify 10 of 10, why now 6 of 6, first message 4 of 6" width="800">
 
