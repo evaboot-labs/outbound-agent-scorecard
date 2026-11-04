@@ -41,7 +41,7 @@ OFFER_BEFORE = {"help", "helps", "to", "can", "will", "could", "would", "should"
 OFFER_AFTER = {"pipeline", "revenue", "meetings", "replies", "bookings", "deals", "outbound", "your", "their"}
 EVENT = re.compile(r"\b(?:raised|raising|funding|series\s+[a-e]|seed\s+round|ipo|acquired|acquisition|merger|hiring|"
                    r"open\s+roles?|job\s+(?:post|posting|ad)s?|launch(?:ed|es|ing)?|announc\w+|award\w*|podcast|"
-                   r"webinar|conference|keynote|your\s+(?:recent\s+)?(?:post|article|talk)|you\s+(?:posted|wrote|shared|spoke))\b", re.I)
+                   r"(?:new|opened|opening)\s+(?:an?\s+|the\s+)?(?:[A-Z]\w+\s+)?offices?|webinar|conference|keynote|your\s+(?:recent\s+)?(?:post|article|talk)|you\s+(?:posted|wrote|shared|spoke))\b", re.I)
 FUNCTIONS = {"sales": ("sales", "sdr", "bdr", "business development", "revenue", "outbound", "commercial"),
              "marketing": ("marketing", "demand gen", "brand"),
              "engineering": ("engineering", "developer"),
@@ -81,7 +81,7 @@ def family(text, start, end, pct):
         return "years"
     if words and words[0] in DURATION_WORDS:
         return None
-    if SALES_WORDS & set(words):
+    if SALES_WORDS & set(words) or re.search(r"(?:sales|sdr|bdr)\s+team\s+(?:of|to|at)\s*$", before):
         return "sales_team"
     if HEAD_WORDS & set(words):
         return "employees"
