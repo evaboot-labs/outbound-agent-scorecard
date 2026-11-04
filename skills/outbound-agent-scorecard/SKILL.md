@@ -50,7 +50,10 @@ Copy it to `runs/agent.first-pass.json` before any fix: the scorecard is about t
 ```bash
 python3 scorecard.py check runs/facts.json runs/agent.first-pass.json
 python3 scorecard.py card runs/facts.json runs/agent.first-pass.json > runs/scorecard.md
+python3 claimcheck.py check runs/facts.json runs/agent.first-pass.json
 ```
+
+`claimcheck.py` reads what each draft says about the lead. It fails a number used as the wrong field (21 written as the team size when 21 is the growth rate), "new role" when `new_in_role` is false, "growing" when both growth fields are negative, funding or a launch the data doesn't mention, the wrong function, and another lead's name or company. Show its `FAIL` lines with the scorecard's.
 
 Show the step table and every `FAIL` line. Each step gets a verdict: **ready for an agent** (9 in 10 pass), **fix one rule, run again** (6 in 10), **keep a person on it** (under 6). The card names the step to hand to an agent first.
 
